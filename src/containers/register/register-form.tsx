@@ -1,50 +1,19 @@
 "use client";
 
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Formik, Form } from "formik";
 import type { FormikHelpers } from "formik";
 import { z } from "zod";
 import { toFormikValidationSchema } from "zod-formik-adapter";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
+import Alert from "@mui/material/Alert";
 import { TextField, Password } from "@/components/formik";
-import { sleep } from "@/utils/common";
+import { RegisterUserClientSchema } from "@/schema/user";
+import { createUser } from "@/actions/user";
 
-const RegisterSchema = z
-  .object({
-    name: z
-      .string({
-        required_error: "Name is a requird field",
-      })
-      .min(3, { message: "Name must be at least 3 characters in length" })
-      .max(64, { message: "Name must not exceed 64 characters in length" }),
-    email: z
-      .string({
-        required_error: "Email is a required field",
-      })
-      .email({ message: "Invalid email address" }),
-    password: z
-      .string({
-        required_error: "Password is a required field",
-      })
-      .min(8, {
-        message: "Password must contain at least 8 characters in length",
-      })
-      .max(48, { message: "Password must not exceed 48 characters in length" }),
-    confirmPassword: z.string({
-      required_error: "Confirm password is a required field",
-    }),
-  })
-  .refine(
-    (values) => {
-      return values.password === values.confirmPassword;
-    },
-    {
-      message: "Passwords must match",
-      path: ["confirmPassword"],
-    }
-  );
-
-type InitialValues = z.infer<typeof RegisterSchema>;
+type InitialValues = z.infer<typeof RegisterUserClientSchema>;
 
 const initialValues: InitialValues = {
   name: "",
@@ -53,48 +22,64 @@ const initialValues: InitialValues = {
   confirmPassword: "",
 };
 
-const handleSubmit = async (
-  values: InitialValues,
-  FormikHelpers: FormikHelpers<InitialValues>
-) => {
-  await sleep(5000);
-  console.log({ values });
-  FormikHelpers.setSubmitting(false);
-  FormikHelpers.resetForm();
-};
-
 function RegisterForm() {
+  const router = useRouter();
+  const [errMsg, setErrMsg] = React.useState("");
+
+  const handleSubmit = async (
+    values: InitialValues,
+    FormikHelpers: FormikHelpers<InitialValues>
+  ) => {
+    try {
+      const { confirmPassword, ...rest } = values;
+      const response = await createUser(rest);
+      if (!response.success) {
+        throw response.error;
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      setErrMsg(error as string);
+    } finally {
+      FormikHelpers.setSubmitting(false);
+      FormikHelpers.resetForm();
+    }
+  };
+
   return (
-    <Formik
-      initialValues={initialValues}
-      validationSchema={toFormikValidationSchema(RegisterSchema)}
-      onSubmit={handleSubmit}
-    >
-      {({ isSubmitting }) => (
-        <Form noValidate>
-          <Stack spacing={2}>
-            <TextField name="name" label="Name" required />
-            <TextField name="email" label="Email" required />
-            <Password name="password" label="Password" required />
-            <Password
-              name="confirmPassword"
-              label="Confirm password"
-              required
-            />
-          </Stack>
-          <Button
-            fullWidth
-            size="large"
-            variant="contained"
-            type="submit"
-            disabled={isSubmitting}
-            sx={{ my: 4 }}
-          >
-            Sign up
-          </Button>
-        </Form>
-      )}
-    </Formik>
+    <>
+      {errMsg && <Alert severity="success">{errMsg}</Alert>}
+      <Formik
+        initialValues={initialValues}
+        validationSchema={toFormikValidationSchema(RegisterUserClientSchema)}
+        onSubmit={handleSubmit}
+      >
+        {({ isSubmitting }) => (
+          <Form noValidate>
+            <Stack spacing={2}>
+              <TextField name="name" label="Name" required />
+              <TextField name="email" label="Email" required />
+              <Password name="password" label="Password" required />
+              <Password
+                name="confirmPassword"
+                label="Confirm password"
+                required
+              />
+            </Stack>
+            <Button
+              fullWidth
+              size="large"
+              variant="contained"
+              type="submit"
+              disabled={isSubmitting}
+              sx={{ my: 4 }}
+            >
+              Sign up
+            </Button>
+          </Form>
+        )}
+      </Formik>
+    </>
   );
 }
 

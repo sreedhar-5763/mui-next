@@ -8,24 +8,9 @@ import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import { TextField, Password } from "@/components/formik";
 import { sleep } from "@/utils/common";
+import { LoginUserClientSchema } from "@/schema/user";
 
-const LoginSchema = z.object({
-  email: z
-    .string({
-      required_error: "Email is a required field",
-    })
-    .email({ message: "Invalid email address" }),
-  password: z
-    .string({
-      required_error: "Password is a required field",
-    })
-    .min(8, {
-      message: "Password must contain at least 8 characters in length",
-    })
-    .max(48, { message: "Password must not exceed 48 characters in length" }),
-});
-
-type InitialValues = z.infer<typeof LoginSchema>;
+type InitialValues = z.infer<typeof LoginUserClientSchema>;
 
 const initialValues: InitialValues = {
   email: "",
@@ -46,7 +31,7 @@ function LoginForm() {
   return (
     <Formik
       initialValues={initialValues}
-      validationSchema={toFormikValidationSchema(LoginSchema)}
+      validationSchema={toFormikValidationSchema(LoginUserClientSchema)}
       onSubmit={handleSubmit}
     >
       {({ isSubmitting }) => (
